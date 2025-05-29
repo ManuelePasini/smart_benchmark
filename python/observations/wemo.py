@@ -10,19 +10,22 @@ from extrapolate import Scale
 
 def createWemoObservations(dt, end, step, dataDir):
 
-    with open(dataDir + 'sensor.json') as data_file:
+    with open(dataDir + "sensor.json") as data_file:
         data = json.load(data_file)
 
     sensors = []
 
     for sensor in data:
-        if sensor['type_']['id'] == "WeMo":
+        if sensor["type_"]["id"] == "WeMo":
             sensors.append(sensor)
     num = len(sensors)
 
-    fpObj = open('data/wemoData.json', 'w')
+    with open(dataDir + "infrastructure.json") as data_file:
+        geometries = json.load(data_file)
 
-    print ("Creating Random Wemo Observations")
+    fpObj = open("data/wemoData.json", "w")
+
+    print("Creating Random Wemo Observations")
 
     count = 0
     while dt < end:
@@ -30,20 +33,31 @@ def createWemoObservations(dt, end, step, dataDir):
         for i in np.random.choice(num, num, replace=False):
             pickedSensor = helper.deleteSensorAttributes(sensors[i])
             id = str(uuid.uuid4())
-
+            geom_id = random.choice(sensors[i]["coverage"])["id"]
             obs = {
                 "id": id,
-                "timeStamp": dt.strftime('%Y-%m-%d %H:%M:%S'),
-                "sensor": pickedSensor,
+                "timestamp": dt.strftime("%Y-%m-%d %H:%M:%S"),
+                "sensor": {"id": pickedSensor["id"]},
+                "location": {
+                    k: v
+                    for k, v in random.choice(
+                        [
+                            geometry
+                            for geometry in geometries
+                            if geometry["id"] == geom_id
+                        ][0]["geometry"]
+                    ).items()
+                    if k != "id"
+                },
                 "payload": {
                     "currentMilliWatts": random.randint(1, 100),
-                    "onTodaySeconds": random.randint(1, 3600)
-                }
+                    "onTodaySeconds": random.randint(1, 3600),
+                },
             }
-            fpObj.write(json.dumps(obs) + '\n')
+            fpObj.write(json.dumps(obs) + "\n")
 
             if count % 200000 == 0:
-                print ("{} Random Wemo Observations".format(count))
+                print("{} Random Wemo Observations".format(count))
             count += 1
 
         dt += step
@@ -51,23 +65,46 @@ def createWemoObservations(dt, end, step, dataDir):
     fpObj.close()
 
 
-def createIntelligentWemoObs(origDays, extendDays, origSpeed, extendSpeed, origSensor, extendSensor, speedScaleNoise,
-                               timeScaleNoise, deviceScaleNoise, dataDir):
+def createIntelligentWemoObs(
+    origDays,
+    extendDays,
+    origSpeed,
+    extendSpeed,
+    origSensor,
+    extendSensor,
+    speedScaleNoise,
+    timeScaleNoise,
+    deviceScaleNoise,
+    dataDir,
+):
 
-    with open(dataDir + 'observation.json') as data_file:
+    with open(dataDir + "observation.json") as data_file:
         observations = json.load(data_file)
 
     seedFile = open("data/seedWemo.json", "w")
     for observation in observations:
-        if observation['sensor']['type_']['id'] == "WeMo":
-            seedFile.write(json.dumps(observation) + '\n')
+        if observation["sensor"]["type_"]["id"] == "WeMo":
+            seedFile.write(json.dumps(observation) + "\n")
     seedFile.close()
 
     seedFile = "data/seedWemo.json"
     outputFile = "data/wemoData.json"
-    scale = Scale(dataDir, seedFile, outputFile, origDays, extendDays, origSpeed, extendSpeed,
-                  origSensor, extendSensor, ["currentMilliWatts", "onTodaySeconds"], speedScaleNoise, timeScaleNoise,
-                  deviceScaleNoise, int)
+    scale = Scale(
+        dataDir,
+        seedFile,
+        outputFile,
+        origDays,
+        extendDays,
+        origSpeed,
+        extendSpeed,
+        origSensor,
+        extendSensor,
+        ["currentMilliWatts", "onTodaySeconds"],
+        speedScaleNoise,
+        timeScaleNoise,
+        deviceScaleNoise,
+        int,
+    )
 
     scale.speedScale()
     scale.deviceScale()

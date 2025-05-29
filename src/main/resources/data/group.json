@@ -2,26 +2,31 @@
   {
     "id": "ISG",
     "name": "ISG",
-    "description": "Information Systems Group"
+    "description": "Information Systems Group",
+    "type": "Group"
   },
   {
     "id": "CMU",
     "name": "CMU",
-    "description": "CMU Privacy Group"
+    "description": "CMU Privacy Group",
+    "type": "Group"
   },
   {
     "id": "Compilers",
     "name": "Compilers",
-    "description": "Compliers Group"
+    "description": "Compliers Group",
+    "type": "Group"
   },
   {
     "id": "TOC",
     "name": "TOC",
-    "description": "Theoretical CS Group"
+    "description": "Theoretical CS Group",
+    "type": "Group"
   },
   {
     "id": "AI",
     "name": "AI",
-    "description": "AI Research Group"
+    "description": "AI Research Group",
+    "type": "Group"
   }
 ]

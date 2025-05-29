@@ -1,6 +1,7 @@
 # Compiled class file
 *.class
-
+benchmark/datasets/
+datasets
 # Log file
 *.log
 

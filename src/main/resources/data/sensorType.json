@@ -5,7 +5,8 @@
         "captureFunctionality": "PUSH", 
         "id": "WiFiAP", 
         "payloadSchema": "[{\"clientId\": \"STRING\"}]", 
-        "name": "WiFiAP"
+        "name": "WiFiAP",
+        "type": "SensorType"
     }, 
     {
         "description": "WeMo Sensors", 
@@ -13,7 +14,8 @@
         "captureFunctionality": "PUSH", 
         "id": "WeMo", 
         "payloadSchema": "[{\"currentMilliWatts\": \"INTEGER\"}, {\"onTodaySeconds\": \"INTEGER\"}]", 
-        "name": "WeMo"
+        "name": "WeMo",
+        "type": "SensorType"
     },
     {
         "description": "Thermometer Sensors",
@@ -21,7 +23,8 @@
         "captureFunctionality": "PUSH",
         "id": "Thermometer",
         "payloadSchema": "[{\"temperature\": \"INTEGER\"}]",
-        "name": "Thermometer"
+        "name": "Thermometer",
+        "type": "SensorType"
     },
     {
         "description": "Beacon Sensors", 
@@ -29,7 +32,8 @@
         "captureFunctionality": "PUSH", 
         "id": "Beacon", 
         "payloadSchema": "[{\"reading\": \"INTEGER\"}]", 
-        "name": "Beacon"
+        "name": "Beacon",
+        "type": "SensorType"
     }, 
     {
         "description": "Energy Meter Sensors", 
@@ -37,7 +41,8 @@
         "captureFunctionality": "PUSH", 
         "id": "EnergyMeter", 
         "payloadSchema": "[{\"temperature\": \"INTEGER\"}]", 
-        "name": "EnergyMeter"
+        "name": "EnergyMeter",
+        "type": "SensorType"
     }, 
     {
         "description": "Camera Sensors", 
@@ -45,6 +50,7 @@
         "captureFunctionality": "PUSH", 
         "id": "Camera", 
         "payloadSchema": "[{\"reading\": \"INTEGER\"}]", 
-        "name": "Camera"
+        "name": "Camera",
+        "type": "SensorType"
     }
 ]
