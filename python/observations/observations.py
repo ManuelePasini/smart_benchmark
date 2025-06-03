@@ -12,7 +12,7 @@ def createObservations(dt, end, step, dataDir, outputDir):
     finalObj = open(outputDir + "observation.json", "w")
     finalObj.write("[\n")
 
-    print("Merging Random WiFiData")
+    # print("Merging Random WiFiData")
 
     # wifiap.createWiFiObservations(dt, end, step, outputDir)
     # wifiObj = open("data/wifiAPData.json")

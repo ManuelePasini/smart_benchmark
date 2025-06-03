@@ -10,11 +10,11 @@ def createObservations(dt, end, step, dataDir, outputDir):
     finalObj = open(outputDir + "semanticObservation.json", "w")
     finalObj.write("[\n")
 
-    presence.createPresence(dt, end, step, outputDir)
-    prObj = open("data/presenceData.json")
-    for line in prObj:
-        finalObj.write(line + ",\n")
-    prObj.close()
+    # presence.createPresence(dt, end, step, outputDir)
+    # prObj = open("data/presenceData.json")
+    # for line in prObj:
+    #    finalObj.write(line + ",\n")
+    # prObj.close()
 
     occupancy.createOccupancy(dt, end, step, outputDir)
     ocObj = open("data/occupancyData.json")

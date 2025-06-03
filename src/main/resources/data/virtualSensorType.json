@@ -4,58 +4,35 @@
     "name": "WiFiToPresence",
     "description": " WIfi To Presence type",
     "inputType": {
-      "description": "WiFi Access Point Sensors",
-      "mobility": "FIX",
-      "captureFunctionality": "PUSH",
-      "id": "WiFiAP",
-      "payloadSchema": "[{\"clientId\": \"STRING\"}]",
-      "name": "WiFiAP"
+      "id": "WiFiAP"
     },
     "semanticObservationType" : {
-      "id": "presence",
-      "name": "presence",
-      "description": "Location Semantic Observation",
-      "payloadSchema": "[{\"location\": \"STRING\"}]"
-
-    }
+      "id": "presence"
+    },
+    "type": "VirtualSensorType"
   },
   {
     "id": "WemoToPresence",
     "name": "WemoToPresence",
     "description": " Wemo To Presence type",
     "inputType": {
-      "description": "WeMo Sensors",
-      "mobility": "FIX",
-      "captureFunctionality": "PUSH",
-      "id": "WeMo",
-      "payloadSchema": "[{\"currentMilliWatts\": \"INTEGER\"}, {\"onTodaySeconds\": \"INTEGER\"}]",
-      "name": "WeMo"
+      "id": "WeMo"
     },
     "semanticObservationType" : {
-      "id": "presence",
-      "name": "presence",
-      "description": "Location Semantic Observation",
-      "payloadSchema": "[{\"location\": \"STRING\"}]"
-
-    }
+      "id": "presence"
+    },
+    "type": "VirtualSensorType"
   },
   {
     "id": "WiFiToOccupancy",
     "name": "WiFiToOccupancy",
     "description": " WIfi To Occupancy type",
     "inputType": {
-      "description": "WiFi Access Point Sensors",
-      "mobility": "FIX",
-      "captureFunctionality": "PUSH",
-      "id": "WiFiAP",
-      "payloadSchema": "[{\"clientId\": \"STRING\"}]",
-      "name": "WiFiAP"
+      "id": "WiFiAP"
     },
     "semanticObservationType" : {
-      "id": "occupancy",
-      "name": "occupancy",
-      "description": "Occupancy Semantic Observation",
-      "payloadSchema": "[{\"occupancy\": \"INTEGER\"}]"
-    }
+      "id": "occupancy"
+    },
+    "type": "VirtualSensorType"
   }
 ]

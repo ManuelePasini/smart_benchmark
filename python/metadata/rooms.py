@@ -29,7 +29,7 @@ def createRooms(numRooms, src, dest):
             "name": "simRoom{}".format(i),
             "floor": copiedRoom["floor"],
             "geometry": copiedRoom["geometry"],
-            "dfsf": "Infrastructure",
+            "type": "Infrastructure",
             "type_": {"id": copiedRoom["type_"]["id"]},
         }
         newRooms.append(room)
