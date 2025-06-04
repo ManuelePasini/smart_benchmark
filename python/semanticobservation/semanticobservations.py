@@ -13,7 +13,7 @@ def createObservations(dt, end, step, dataDir, outputDir):
     # presence.createPresence(dt, end, step, outputDir)
     # prObj = open("data/presenceData.json")
     # for line in prObj:
-    #    finalObj.write(line + ",\n")
+    #     finalObj.write(line + ",\n")
     # prObj.close()
 
     occupancy.createOccupancy(dt, end, step, outputDir)

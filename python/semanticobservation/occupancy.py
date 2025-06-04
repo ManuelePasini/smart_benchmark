@@ -19,6 +19,7 @@ def createOccupancy(dt, end, step, dataDir):
             pickedSensor = v
         v["type"] = "VirtualSensor"
         v["type_"] = {"id": v["type_"]["id"]}
+        v["timestamp"] = v.pop("timeStamp", None)
 
     with open(dataDir + "sensor.json") as data_file:
         data = json.load(data_file)
@@ -30,7 +31,7 @@ def createOccupancy(dt, end, step, dataDir):
             sensors.append(sensor)
         sensor["type_"] = ({"id": sensor["type_"]["id"]},)
         sensor["owner"] = ({"id": sensor["owner"]["id"]},)
-        sensor["type"] = "Sensor"
+        sensor["type"] = "VirtualSensor"
 
     numSenors = len(sensors)
 
@@ -46,13 +47,15 @@ def createOccupancy(dt, end, step, dataDir):
     type_ = helper.deleteSOTypeAttributes(type_)
     pickedSensor = helper.deleteVirtualSensorAttributes(pickedSensor)
     count = 0
+
     while dt < end:
 
         for j in np.random.choice(numRooms, int(numRooms / 2), replace=False):
             id = str(uuid.uuid4())
             sobs = {
                 "id": id,
-                "timestamp": dt.strftime("%Y-%m-%d %H:%M:%SS"),
+                "timestamp": dt.strftime("%Y-%m-%dT%H:%M:%S")
+                + f".{dt.microsecond // 1000:03d}",
                 "virtualSensor": {"id": pickedSensor["id"]},
                 "type_": {"id": type_["id"]},
                 "semanticEntity": {"id": rooms[j]["id"]},

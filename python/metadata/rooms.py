@@ -12,6 +12,7 @@ def createRooms(numRooms, src, dest):
     for geometry in rooms:
         for point in geometry["geometry"]:
             point.pop("id", None)
+        geometry["type"] = "Infrastructure"
 
     print("Creating Rooms")
 

@@ -36,7 +36,8 @@ def createTemperatureObservations(dt, end, step, dataDir):
             id = str(uuid.uuid4())
             obs = {
                 "id": id,
-                "timestamp": dt.strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": dt.strftime("%Y-%m-%dT%H:%M:%S")
+                + f".{dt.microsecond // 1000:03d}",
                 "sensor": {"id": pickedSensor["id"]},
                 "location": {
                     k: v

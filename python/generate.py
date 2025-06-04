@@ -165,7 +165,7 @@ def directoryClenaup(config):
 
 
 if __name__ == "__main__":
-    configFile = "/home/python/configs/config_small.ini"
+    configFile = "/home/python/configs/config_large.ini"
     configDict = readConfiguration(configFile)
     pattern = configDict["others"]["pattern"]
     copyFiles(
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     createSensors(configDict, pattern)
 
     createObservations(configDict, pattern)
-    # createSemanticObservations(configDict, pattern)
+    createSemanticObservations(configDict, pattern)
 
     # createQueries(configDict)
     # dataSeparator.separateData(int(configDict['others']["insert-test-data"]), configDict['others']['output-dir'])
