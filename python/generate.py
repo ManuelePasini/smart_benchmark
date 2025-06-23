@@ -2,6 +2,10 @@ import configparser as ConfigParser
 import datetime
 import shutil
 import sys
+import os
+import json
+import ijson
+import glob
 
 from metadata import sensors, users, rooms
 from observations import observations
@@ -164,10 +168,178 @@ def directoryClenaup(config):
     pass
 
 
+def parseValue(value):
+    if isinstance(value, str):
+        return f"'{value}'"
+    elif isinstance(value, (int, float)):
+        return value
+    elif isinstance(value, bool):
+        return "true" if value else "false"
+    else:
+        return json.dumps(value)
+
+
+def createEdge(source_id, label: str, dest_id):
+    return f"""MATCH (u {{id : {parseValue(source_id)} }}), (v {{id : {parseValue(dest_id)} }}) CREATE (u) - [r:has{label.capitalize()}] -> (v);"""
+
+
+def parseProp(entityId, k, v):
+    edges = []
+
+    if isinstance(v, str):
+        return f"{k}: '{v}'", edges
+    elif isinstance(v, (int, float)):
+        return f"{k}: {v}", edges
+    elif isinstance(v, bool):
+        return f"{k}: {'true' if v else 'false'}", edges
+    elif isinstance(v, list):
+        # Check if it's a list of edges
+        edgesList = all(
+            [True if isinstance(item, dict) and "id" in item else False for item in v]
+        )
+        if edgesList:
+            [edges.append(createEdge(entityId, k, item["id"])) for item in v]
+            return "", edges
+        else:
+            if k == "geometry":
+                return "", edges
+            return f"{k}: {json.dumps(v)}", edges
+
+    elif isinstance(v, dict):
+        if "id" in v:
+            edges.append(createEdge(entityId, k, v["id"]))
+            return "", edges
+        else:
+            if k == "geometry":
+                return "", edges
+            elif k == "payload":
+                key = list(v.keys())[0]
+                value = v[key]
+                return f"{key}: {repr(value)}", edges
+    else:
+        return f"{k}: {json.dumps(v)}", edges
+
+
+def entityToCypher(entity):
+    type = entity["type"]
+    id = entity["id"]
+
+    a = [parseProp(id, k, v) for k, v in entity.items() if k != "type"]
+    props = ",".join(item[0] for item in a if item[0] != "")
+    edges = "\n".join([item2 for item in a if len(item[1]) > 0 for item2 in item[1]])
+    cypherQuery = f"CREATE (n:{type} {{ {props} }});"
+    return cypherQuery + "\n" + edges if len(edges) > 0 else cypherQuery
+
+
+def updateMeasurement(entity, id):
+    payload = entity["payload"]
+    key = list(payload.keys())[0]
+    value = payload[key]
+    return f"""MATCH (n {{id: '{id}'}}) SET n.{key} = {repr(value)}, n.timestamp = '{entity['timestamp']}', n.location = '{entity["location"]}';"""
+
+
+def parseToCypher(config):
+    print("Parsing to Cypher")
+
+    outputDir = config["others"]["output-dir"]
+    tempSensors = int(config["sensors"]["temperature"]) + 6
+    files = [
+        "group.json",
+        "user.json",
+        "platformType.json",
+        "sensorType.json",
+        "platform.json",
+        "infrastructureType.json",
+        "infrastructure.json",
+        "sensor.json",
+        "virtualSensorType.json",
+        "virtualSensor.json",
+        "semanticObservationType.json",
+        "observation.json",
+    ]
+    for filename in files:
+        if (
+            filename.endswith(".json")
+            and "location" not in filename
+            and filename != "semanticObservation.json"
+        ):
+            json_path = os.path.join(outputDir, filename)
+            cypher_path = os.path.join(outputDir, filename.replace(".json", ".cypher"))
+
+            tsMap = {}
+            # Open input and output files
+            with open(json_path, "r") as f_in, open(cypher_path, "w") as f_out:
+                count = 0
+                # For each entity in the JSON file, convert to Cypher
+                for entityDict in ijson.items(f_in, "item"):
+                    # Special processing for observation.json
+                    if filename == "observation.json":
+                        payload = entityDict["payload"]
+                        key = list(payload.keys())[0]
+                        # First create the ts
+                        if count < tempSensors:
+                            count = count + 1
+                            cypher_line = entityToCypher(entityDict)
+
+                            tsMap[entityDict["sensor"]["id"]] = {key: entityDict["id"]}
+                        else:
+                            # Then update them
+                            id = tsMap[entityDict["sensor"]["id"]][key]
+                            cypher_line = updateMeasurement(entityDict, id)
+                    else:
+                        cypher_line = entityToCypher(entityDict)
+                    f_out.write(cypher_line + "\n")
+
+    # Merge cypher files
+    cypherFiles = [f.replace(".json", ".cypher") for f in files]
+    if len(cypherFiles) > 0:
+        staticCypherPath = os.path.join(outputDir, "small.cypher")
+        with open(staticCypherPath, "w") as merged_file:
+            for cypher_file in cypherFiles:
+                with open(os.path.join(outputDir, cypher_file), "r") as f:
+                    row = f.read()
+                    if row != "":
+                        merged_file.write(row)
+    else:
+        print("No Cypher files found to merge.")
+
+
+def removeJsonField(walk_generator, field_to_remove):
+    for dirpath, _, filenames in walk_generator:
+        for filename in filenames:
+            if filename.endswith(".json"):
+                print(
+                    f"Removing field '{field_to_remove}' from {filename} in {dirpath}"
+                )
+                filepath = os.path.join(dirpath, filename)
+                tmp_path = filepath + ".tmp"
+
+                with open(filepath, "r", encoding="utf-8") as infile, open(
+                    tmp_path, "w", encoding="utf-8"
+                ) as outfile:
+                    outfile.write("[\n")
+                    first = True
+                    for obj in ijson.items(infile, "item"):
+                        obj.pop(field_to_remove, None)
+                        if not first:
+                            outfile.write(",\n")
+                        outfile.write(json.dumps(obj, ensure_ascii=False))
+                        first = False
+                    outfile.write("\n]")
+
+                os.replace(tmp_path, filepath)
+
+
 if __name__ == "__main__":
     configFile = "/home/python/configs/config_large.ini"
     configDict = readConfiguration(configFile)
     pattern = configDict["others"]["pattern"]
+    tsDirectory = "benchmark/timeseries"
+    os.makedirs(tsDirectory, exist_ok=True)
+    # Clear old TS data
+    for file_path in glob.glob(os.path.join(tsDirectory, "*")):
+        if os.path.isfile(file_path):
+            os.remove(file_path)
     copyFiles(
         common, configDict["others"]["data-dir"], configDict["others"]["output-dir"]
     )
@@ -177,7 +349,8 @@ if __name__ == "__main__":
     createSensors(configDict, pattern)
 
     createObservations(configDict, pattern)
-    createSemanticObservations(configDict, pattern)
+    # createSemanticObservations(configDict, pattern)
 
-    # createQueries(configDict)
+    removeJsonField(os.walk(configDict["others"]["output-dir"]), "geometry")
+    parseToCypher(configDict)
     # dataSeparator.separateData(int(configDict['others']["insert-test-data"]), configDict['others']['output-dir'])

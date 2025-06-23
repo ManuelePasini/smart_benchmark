@@ -3,9 +3,20 @@ import random
 import json
 import uuid
 import numpy as np
+import os
 
 from utils import helper
 from extrapolate import Scale
+
+
+def parseLocation(location):
+    if isinstance(location, dict):
+        return f"POINT({location['x']} {location['y']} {location['z']})"
+    elif isinstance(location, list):
+        points = [f"{coord['x']} {coord['y']} {coord['z']}" for coord in location]
+        return f"LINESTRING({', '.join(points)})"
+    else:
+        raise ValueError("Unsupported location format: {}".format(type(location)))
 
 
 def createTemperatureObservations(dt, end, step, dataDir):
@@ -26,12 +37,15 @@ def createTemperatureObservations(dt, end, step, dataDir):
     fpObj = open("data/temperatureData.json", "w")
 
     print("Creating Random Temperature Observations")
-
+    buffer = {}
     count = 0
     while dt < end:
 
         for i in np.random.choice(num, num, replace=False):
             pickedSensor = helper.deleteSensorAttributes(sensors[i])
+            sensorId = sensors[i]["id"]
+            sensorTSPath = f"benchmark/datasets/large/timeseries/{sensorId}.json"
+            os.makedirs(os.path.dirname(sensorTSPath), exist_ok=True)
             geom_id = random.choice(sensors[i]["coverage"])["id"]
             id = str(uuid.uuid4())
             obs = {
@@ -39,7 +53,7 @@ def createTemperatureObservations(dt, end, step, dataDir):
                 "timestamp": dt.strftime("%Y-%m-%dT%H:%M:%S")
                 + f".{dt.microsecond // 1000:03d}",
                 "sensor": {"id": pickedSensor["id"]},
-                "location": {
+                "geometry": {
                     k: v
                     for k, v in random.choice(
                         [
@@ -51,11 +65,23 @@ def createTemperatureObservations(dt, end, step, dataDir):
                     if k != "id"
                 },
                 "payload": {"temperature": random.randint(1, 100)},
-                "type": "Observation",
+                "type": "Temperature",
             }
+            obs["location"] = parseLocation(obs["geometry"])
+            obs.pop("geometry", None)
             fpObj.write(json.dumps(obs) + "\n")
+            if sensorTSPath in buffer:
+                buffer[sensorTSPath].append(obs)
+            else:
+                buffer[sensorTSPath] = [obs]
 
             if count % 200000 == 0:
+                for sensorPath, observations in buffer.items():
+                    with open(sensorPath, "a") as sensorFile:
+                        sensorFile.write(
+                            "\n".join(json.dumps(o) for o in observations) + "\n"
+                        )
+                    buffer[sensorPath] = []  # svuota la lista
                 print("{} Random Temperature Observations".format(count))
             count += 1
 

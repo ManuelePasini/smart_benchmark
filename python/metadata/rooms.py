@@ -3,6 +3,16 @@ import json
 import uuid
 
 
+def parseLocation(location):
+    if isinstance(location, dict):
+        return f"POINT({location['x']} {location['y']} {location['z']})"
+    elif isinstance(location, list):
+        points = [f"{coord['x']} {coord['y']} {coord['z']}" for coord in location]
+        return f"LINESTRING({', '.join(points)})"
+    else:
+        raise ValueError("Unsupported location format: {}".format(type(location)))
+
+
 def createRooms(numRooms, src, dest):
 
     with open(src + "infrastructure.json") as data_file:
@@ -12,6 +22,7 @@ def createRooms(numRooms, src, dest):
     for geometry in rooms:
         for point in geometry["geometry"]:
             point.pop("id", None)
+        geometry["location"] = parseLocation(geometry["geometry"])
         geometry["type"] = "Infrastructure"
 
     print("Creating Rooms")
@@ -29,6 +40,7 @@ def createRooms(numRooms, src, dest):
             "id": id.replace("-", "_"),
             "name": "simRoom{}".format(i),
             "floor": copiedRoom["floor"],
+            "location": parseLocation(copiedRoom["geometry"]),
             "geometry": copiedRoom["geometry"],
             "type": "Infrastructure",
             "type_": {"id": copiedRoom["type_"]["id"]},
