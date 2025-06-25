@@ -254,7 +254,7 @@ def parseToCypher(config):
         "sensor.json",
         "virtualSensorType.json",
         "virtualSensor.json",
-        "semanticObservationType.json",
+        # "semanticObservationType.json",
         "observation.json",
     ]
     for filename in files:
@@ -330,11 +330,33 @@ def removeJsonField(walk_generator, field_to_remove):
                 os.replace(tmp_path, filepath)
 
 
+def addType():
+
+    # Path del file JSON
+    file_path = "/home/benchmark/datasets/large/observation.json"
+
+    # Leggi il file JSON
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Aggiungi un campo a ogni elemento
+    for element in data:
+        element["type"] = "Temperature"  # Cambia 'valore' con quello che ti serve
+        element.pop("nuovo_campo", None)  # Rimuovi il campo 'nuovo_campo' se esiste
+    # Scrivi di nuovo il file JSON aggiornato
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+    print("File aggiornato con successo.")
+
+
 if __name__ == "__main__":
-    configFile = "/home/python/configs/config_large.ini"
+
+    size = "big"
+    configFile = f"/home/python/configs/config_{size}.ini"
     configDict = readConfiguration(configFile)
     pattern = configDict["others"]["pattern"]
-    tsDirectory = "benchmark/timeseries"
+    tsDirectory = f"benchmark/datasets/{size}/timeseries/"
     os.makedirs(tsDirectory, exist_ok=True)
     # Clear old TS data
     for file_path in glob.glob(os.path.join(tsDirectory, "*")):
@@ -353,4 +375,7 @@ if __name__ == "__main__":
 
     removeJsonField(os.walk(configDict["others"]["output-dir"]), "geometry")
     parseToCypher(configDict)
-    # dataSeparator.separateData(int(configDict['others']["insert-test-data"]), configDict['others']['output-dir'])
+    dataSeparator.separateData(
+        int(configDict["others"]["insert-test-data"]),
+        configDict["others"]["output-dir"],
+    )
