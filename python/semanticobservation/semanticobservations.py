@@ -4,23 +4,23 @@ import uuid
 from . import presence, occupancy
 
 
-def createObservations(dt, end, step, dataDir, outputDir):
+def createObservations(dt, end, step, dataDir, outputDir, size):
 
     line = None
     finalObj = open(outputDir + "semanticObservation.json", "w")
     finalObj.write("[\n")
 
-    # presence.createPresence(dt, end, step, outputDir)
-    # prObj = open("data/presenceData.json")
-    # for line in prObj:
-    #     finalObj.write(line + ",\n")
-    # prObj.close()
-
-    occupancy.createOccupancy(dt, end, step, outputDir)
-    ocObj = open("data/occupancyData.json")
-    for line in ocObj:
+    presence.createPresence(dt, end, step, outputDir, size)
+    prObj = open("data/presenceData.json")
+    for line in prObj:
         finalObj.write(line + ",\n")
-    ocObj.close()
+    prObj.close()
+
+    # occupancy.createOccupancy(dt, end, step, outputDir, size)
+    # ocObj = open("data/occupancyData.json")
+    # for line in ocObj:
+    #     finalObj.write(line + ",\n")
+    # ocObj.close()
 
     line = json.loads(line)
     line["id"] = str(uuid.uuid4())

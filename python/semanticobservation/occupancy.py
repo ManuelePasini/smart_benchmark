@@ -10,7 +10,7 @@ from extrapolate import Scale, SemanticScale
 MAX_OCCUPANCY = 100
 
 
-def createOccupancy(dt, end, step, dataDir):
+def createOccupancy(dt, end, step, dataDir, size):
 
     with open(dataDir + "virtualSensor.json") as data_file:
         vs = json.load(data_file)
