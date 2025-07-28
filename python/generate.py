@@ -366,11 +366,12 @@ def removeJsonField(walk_generator, field_to_remove):
 
 if __name__ == "__main__":
 
-    size = "big"
+    size = "small"
     configFile = f"/home/python/configs/config_{size}.ini"
     configDict = readConfiguration(configFile)
     pattern = configDict["others"]["pattern"]
     tsDirectory = f"benchmark/datasets/{size}/timeseries/"
+    os.makedirs("data", exist_ok=True)
     os.makedirs(tsDirectory, exist_ok=True)
     # Clear old TS data
     for file_path in glob.glob(os.path.join(tsDirectory, "*")):
@@ -387,11 +388,11 @@ if __name__ == "__main__":
     createObservations(configDict, pattern, size)
     createSemanticObservations(configDict, pattern, size)
 
-    removeJsonField(os.walk(configDict["others"]["output-dir"]), "geometry")
+    removeJsonField(os.walk(configDict["others"]["output-di r"]), "geometry")
     parseToCypher(configDict)
-    # dataSeparator.separateData(
-    #     int(configDict["others"]["insert-test-data"]),
-    #     configDict["others"]["output-dir"],
-    # )
+    dataSeparator.separateData(
+        int(configDict["others"]["insert-test-data"]),
+        configDict["others"]["output-dir"],
+    )
 
     # head -n -30000 small.cypher > small2.cypher
