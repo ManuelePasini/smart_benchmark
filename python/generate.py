@@ -366,7 +366,7 @@ def removeJsonField(walk_generator, field_to_remove):
 
 if __name__ == "__main__":
 
-    size = "small"
+    size = "large"
     configFile = f"/home/python/configs/config_{size}.ini"
     configDict = readConfiguration(configFile)
     pattern = configDict["others"]["pattern"]
@@ -388,11 +388,19 @@ if __name__ == "__main__":
     createObservations(configDict, pattern, size)
     createSemanticObservations(configDict, pattern, size)
 
-    removeJsonField(os.walk(configDict["others"]["output-di r"]), "geometry")
+    removeJsonField(os.walk(configDict["others"]["output-dir"]), "geometry")
     parseToCypher(configDict)
     dataSeparator.separateData(
         int(configDict["others"]["insert-test-data"]),
         configDict["others"]["output-dir"],
     )
-
+    for filename in os.listdir(
+        os.path.join(configDict["others"]["output-dir"], "timeseries")
+    ):
+        if filename.endswith(".tmp"):
+            file_path = os.path.join(
+                configDict["others"]["output-dir"], "timeseries", filename
+            )
+            os.remove(file_path)
+            print(f"Rimosso: {file_path}")
     # head -n -30000 small.cypher > small2.cypher
