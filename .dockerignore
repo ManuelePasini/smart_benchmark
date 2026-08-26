@@ -1,0 +1,6 @@
+data/
+benchmark/datasets/
+**/__pycache__
+.git
+.gitignore
+.devcontainer

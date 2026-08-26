@@ -183,17 +183,17 @@ def parseValue(value):
         return json.dumps(value)
 
 
-def createEdge(source_id, label: str, dest_id):
+def createEdge(source_id, label: str, dest_id, type):
     label = label if label != "sensor" else "temperature"
     # If it's a measurement, the link is not temp -> sensor but sensor -> temp
     return (
-        f"""MATCH (u {{id : {parseValue(source_id)} }}), (v {{id : {parseValue(dest_id)} }}) CREATE (u) - [r:has{label.capitalize()}] -> (v);"""
+        f"""MATCH (u : {type} {{id : {parseValue(source_id)} }}), (v {{id : {parseValue(dest_id)} }}) CREATE (u) - [r:has{label.capitalize()}] -> (v);"""
         if label != "temperature"
-        else f"""MATCH (u {{id : {parseValue(source_id)} }}), (v {{id : {parseValue(dest_id)} }}) CREATE (v) - [r:has{label.capitalize()}] -> (u);"""
+        else f"""MATCH (u : {type} {{id : {parseValue(source_id)} }}), (v {{id : {parseValue(dest_id)} }}) CREATE (v) - [r:has{label.capitalize()}] -> (u);"""
     )
 
 
-def parseProp(entityId, k, v):
+def parseProp(entityId, k, v, type):
     edges = []
 
     if isinstance(v, str):
@@ -208,7 +208,7 @@ def parseProp(entityId, k, v):
             [True if isinstance(item, dict) and "id" in item else False for item in v]
         )
         if edgesList:
-            [edges.append(createEdge(entityId, k, item["id"])) for item in v]
+            [edges.append(createEdge(entityId, k, item["id"], type)) for item in v]
             return "", edges
         else:
             if k == "geometry":
@@ -217,7 +217,7 @@ def parseProp(entityId, k, v):
 
     elif isinstance(v, dict):
         if "id" in v:
-            edges.append(createEdge(entityId, k, v["id"]))
+            edges.append(createEdge(entityId, k, v["id"], type))
             return "", edges
         else:
             if k == "geometry":
@@ -230,15 +230,18 @@ def parseProp(entityId, k, v):
         return f"{k}: {json.dumps(v)}", edges
 
 
-def entityToCypher(entity):
+def entityToCypher(entity, edges=True):
     type = entity["type"]
     id = entity["id"]
 
-    a = [parseProp(id, k, v) for k, v in entity.items() if k != "type"]
+    a = [parseProp(id, k, v, type) for k, v in entity.items() if k != "type"]
     props = ",".join(item[0] for item in a if item[0] != "")
     edges = "\n".join([item2 for item in a if len(item[1]) > 0 for item2 in item[1]])
     cypherQuery = f"CREATE (n:{type} {{ {props} }});"
-    return cypherQuery + "\n" + edges if len(edges) > 0 else cypherQuery
+    if edges:
+        return cypherQuery + "\n" + edges if len(edges) > 0 else cypherQuery
+    else:
+        return cypherQuery + "\n"
 
 
 def updateMeasurement(entity, id):
@@ -246,9 +249,9 @@ def updateMeasurement(entity, id):
     key = list(payload.keys())[0]
     value = payload[key]
     if "location" in entity:
-        return f"""MATCH (n {{id: '{id}'}}) SET n.{key} = {repr(value)}, n.timestamp = '{entity['timestamp']}', n.location = '{entity["location"]}';"""
+        return f"""MATCH (n : Temperature {{id: '{id}'}}) SET n.{key} = {repr(value)}, n.timestamp = '{entity['timestamp']}', n.location = '{entity["location"]}';"""
     else:
-        return f"""MATCH (n {{id: '{id}'}}) SET n.{key} = {repr(value)}, n.timestamp = '{entity['timestamp']}';"""
+        return f"""MATCH (n : Temperature {{id: '{id}'}}) SET n.{key} = {repr(value)}, n.timestamp = '{entity['timestamp']}';"""
 
 
 def parseToCypher(config):
@@ -269,7 +272,7 @@ def parseToCypher(config):
         "virtualSensor.json",
         # "semanticObservation.json",
         # "semanticObservationType.json",
-        "observation.json",
+        # "observation.json",
     ]
     for filename in files:
         if (
@@ -280,7 +283,7 @@ def parseToCypher(config):
             print(f"Processing {filename}")
             json_path = os.path.join(outputDir, filename)
             cypher_path = os.path.join(outputDir, filename.replace(".json", ".cypher"))
-
+            ts_path = os.path.join(outputDir, "ts.cypher")
             tsMap = {}
             # Open input and output files
             with open(json_path, "r") as f_in, open(cypher_path, "w") as f_out:
@@ -288,38 +291,61 @@ def parseToCypher(config):
                 # For each entity in the JSON file, convert to Cypher
                 try:
                     for entityDict in ijson.items(f_in, "item"):
-                        # Special processing for observation.json
-                        if (
-                            filename == "observation.json"
-                            or filename == "semanticObservation.json"
-                        ):
-                            payload = entityDict["payload"]
-                            key = list(payload.keys())[0]
-                            # First create the ts
-                            if count < tempSensors:
-                                count = count + 1
-                                cypher_line = entityToCypher(entityDict)
-                                if filename == "observation.json":
-                                    tsMap[entityDict["sensor"]["id"]] = {
-                                        key: entityDict["id"]
-                                    }
-                                else:
-                                    tsMap[entityDict["virtualSensor"]["id"]] = {
-                                        key: entityDict["id"]
-                                    }
-                            else:
-                                # Then update them
-                                if filename == "observation.json":
-                                    id = tsMap[entityDict["sensor"]["id"]][key]
-                                else:
-                                    id = tsMap[entityDict["virtualSensor"]["id"]][key]
-                                cypher_line = updateMeasurement(entityDict, id)
-                        else:
-                            cypher_line = entityToCypher(entityDict)
+                        # # Special processing for observation.json
+                        # if (
+                        #     filename == "observation.json"
+                        #     or filename == "semanticObservation.json"
+                        # ):
+                        #     payload = entityDict["payload"]
+                        #     key = list(payload.keys())[0]
+                        #     # First create the ts
+                        #     if count < tempSensors:
+                        #         count = count + 1
+                        #         cypher_line = entityToCypher(entityDict)
+                        #         if filename == "observation.json":
+                        #             tsMap[entityDict["sensor"]["id"]] = {
+                        #                 key: entityDict["id"]
+                        #             }
+                        #         else:
+                        #             tsMap[entityDict["virtualSensor"]["id"]] = {
+                        #                 key: entityDict["id"]
+                        #             }
+                        #     else:
+                        #         # Then update them
+                        #         if filename == "observation.json":
+                        #             id = tsMap[entityDict["sensor"]["id"]][key]
+                        #         else:
+                        #             id = tsMap[entityDict["virtualSensor"]["id"]][key]
+                        #         cypher_line = updateMeasurement(entityDict, id)
+                        # else:
+                        cypher_line = entityToCypher(entityDict)
                         f_out.write(cypher_line + "\n")
                 except Exception as e:
                     print(f"Error processing {filename}: {e}")
                     continue
+
+    ts_path = os.path.join(outputDir, "timeseries")
+    output_file = os.path.join(outputDir, "ts.cypher")
+    for id, ts in enumerate(os.listdir(ts_path)):
+        sensor_id = ts.split(".")[0]
+        ts_file_json = os.path.join(ts_path, ts)
+        cypher_line = f"MATCH (s_{id}: Sensor {{id: '{sensor_id}'}})\n"
+        # Write ts onto file
+        with open(ts_file_json, "r") as f_in, open(output_file, "a") as f_out:
+            f_out.write(cypher_line)
+            for line in f_in:
+                entityDict = json.loads(line)
+                a = [
+                    parseProp(id, k, v, "Temperature")
+                    for k, v in entityDict.items()
+                    if k != "type"
+                ]
+                props = ",".join(item[0] for item in a if item[0] != "")
+                cypher_line = f"""CREATE (s_{id})-[hasTemperature]->(
+                    :Temperature {{{props}}}
+                )\n"""
+                f_out.write(cypher_line)
+            f_out.write(";")
 
     # Merge cypher files
     cypherFiles = [f.replace(".json", ".cypher") for f in files]
@@ -366,9 +392,10 @@ def removeJsonField(walk_generator, field_to_remove):
 
 if __name__ == "__main__":
 
-    size = "big"
-    configFile = f"/home/python/configs/config_{size}.ini"
+    size = os.getenv("DATASET_SIZE", "small")
+    configFile = f"/home/smart_benchmark/python/configs/config_{size}.ini"
     configDict = readConfiguration(configFile)
+
     pattern = configDict["others"]["pattern"]
     tsDirectory = f"benchmark/datasets/{size}/timeseries/"
     os.makedirs("data", exist_ok=True)
@@ -389,8 +416,11 @@ if __name__ == "__main__":
     createObservations(configDict, pattern, size)
     # createSemanticObservations(configDict, pattern, size)
 
-    removeJsonField(os.walk(configDict["others"]["output-dir"]), "geometry")
-    parseToCypher(configDict)
+    try:
+        removeJsonField(os.walk(configDict["others"]["output-dir"]), "geometry")
+        parseToCypher(configDict)
+    except Exception as e:
+        print(f"Error occurred: {e}")
 
     dataSeparator.separateData(
         int(configDict["others"]["insert-test-data"]),
@@ -405,5 +435,3 @@ if __name__ == "__main__":
             )
             os.remove(file_path)
             print(f"Rimosso: {file_path}")
-
-    # head -n -30000 small.cypher > small2.cypher
